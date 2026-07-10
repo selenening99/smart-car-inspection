@@ -1,0 +1,13 @@
+names:
+- license plate
+- wheel
+nc: 2
+roboflow:
+  license: CC BY 4.0
+  project: car-9zc6g
+  url: https://universe.roboflow.com/selenes-workspace-eckcv/car-9zc6g/dataset/3
+  version: 3
+  workspace: selenes-workspace-eckcv
+test: ../test/images
+train: ../train/images
+val: ../valid/images
