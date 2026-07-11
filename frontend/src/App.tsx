@@ -1,5 +1,7 @@
+import CameraPage from "./pages/CameraPage";
+
 function App() {
-  return <h1>Smart Car Inspection</h1>
+  return <CameraPage />;
 }
 
-export default App
+export default App;
