@@ -1,7 +1,11 @@
-import CameraPage from "./pages/CameraPage";
+import { useEffect } from "react";
+import CameraView from "./modules/camera/CameraView";
+import { loadModel } from "./modules/ai/detector";
 
-function App() {
-  return <CameraPage />;
+export default function App() {
+  useEffect(() => {
+    loadModel();
+  }, []);
+
+  return <CameraView />;
 }
-
-export default App;
