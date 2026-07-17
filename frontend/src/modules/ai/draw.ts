@@ -1,4 +1,10 @@
-import { Detection } from "./types";
+import { CLASS_NAMES } from "./types";
+import type { Detection } from "./types";
+
+const CLASS_COLORS: Record<number, string> = {
+  0: "#00ff00",
+  1: "#0000ff",
+};
 
 export function drawDetections(
   canvas: HTMLCanvasElement,
@@ -12,18 +18,16 @@ export function drawDetections(
   ctx.font = "20px Arial";
 
   detections.forEach((det) => {
-    ctx.strokeStyle = "#00ff00";
-    ctx.fillStyle = "#00ff00";
+    const color = CLASS_COLORS[det.classId] ?? "#ff0000";
+    const label = CLASS_NAMES[det.classId] ?? det.label;
 
-    ctx.strokeRect(
-      det.x,
-      det.y,
-      det.width,
-      det.height
-    );
+    ctx.strokeStyle = color;
+    ctx.fillStyle = color;
+
+    ctx.strokeRect(det.x, det.y, det.width, det.height);
 
     ctx.fillText(
-      `${det.label} ${(det.confidence * 100).toFixed(1)}%`,
+      `${label} ${(det.confidence * 100).toFixed(1)}%`,
       det.x,
       det.y - 8
     );

@@ -10,3 +10,10 @@ export interface Detection {
 
   label: string;
 }
+
+export const CLASS_NAMES = [
+  "license plate",
+  "wheel",
+] as const;
+
+export type ClassName = (typeof CLASS_NAMES)[number];

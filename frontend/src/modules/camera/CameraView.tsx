@@ -1,15 +1,28 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { loadModel } from "../ai/detector";
 import { preprocess } from "../ai/preprocess";
 import { runInference } from "../ai/inference";
-import { postprocess } from "../ai/postprocess";
+import { decoder } from "../ai/decoder";
+import { nonMaximumSuppression } from "../ai/nms";
+import { drawDetections } from "../ai/draw";
+import { estimateVehiclePose } from "../pose";
+import type { PoseResult } from "../pose";
+import { DebugHUD } from "../../components/DebugHUD";
+
+const INPUT_SIZE = 640;
 
 export default function CameraView() {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const processCanvasRef = useRef<HTMLCanvasElement>(null);
+  const overlayCanvasRef = useRef<HTMLCanvasElement>(null);
+  const [fps, setFps] = useState(0);
+  const [inferenceTime, setInferenceTime] = useState(0);
+  const [detectionCount, setDetectionCount] = useState(0);
+  const [pose, setPose] = useState<PoseResult>({ pose: "unknown", confidence: 0 });
 
   useEffect(() => {
-    console.log("===== NEW CameraView v2 =====");
+    let rafId: number | undefined;
+    let isMounted = true;
 
     async function startCamera() {
       try {
@@ -30,51 +43,80 @@ export default function CameraView() {
           await videoRef.current.play();
 
           const session = await loadModel();
+          const processCanvas = processCanvasRef.current;
+          const overlayCanvas = overlayCanvasRef.current;
 
-          console.log(session);
+          if (!processCanvas || !overlayCanvas) return;
 
-          const canvas = canvasRef.current;
-          if (!canvas) return;
+          processCanvas.width = INPUT_SIZE;
+          processCanvas.height = INPUT_SIZE;
 
-          canvas.width = videoRef.current.videoWidth;
-          canvas.height = videoRef.current.videoHeight;
+          overlayCanvas.width = videoRef.current.videoWidth;
+          overlayCanvas.height = videoRef.current.videoHeight;
 
-          console.log("Canvas:", canvas.width, canvas.height);
+          let previousTime = performance.now();
 
-          const ctx = canvas.getContext("2d");
+          async function inferFrame() {
+            if (!isMounted) return;
 
-          if (!ctx) return;
+            const video = videoRef.current;
+            if (!video) return;
 
-          setInterval(async () => {
-            if (!videoRef.current) return;
+            const pCanvas = processCanvasRef.current;
+            if (!pCanvas) return;
 
-            ctx.drawImage(
-              videoRef.current,
-              0,
-              0,
-              canvas.width,
-              canvas.height
-            );
+            const pCtx = pCanvas.getContext("2d");
+            if (!pCtx) return;
 
-            const tensor = preprocess(canvas);
+            // draw video frame into processing canvas synchronously
+            pCtx.drawImage(video, 0, 0, INPUT_SIZE, INPUT_SIZE);
 
-            console.log("Before inference");
+            const tensor = preprocess(pCanvas);
+            const inferenceStart = performance.now();
+            const output = await runInference(session, tensor);
+            const inferenceEnd = performance.now();
 
-            try {
-              const output = await runInference(session, tensor);
+            const detections = decoder(output, INPUT_SIZE, 0.25);
+            const finalDetections = nonMaximumSuppression(detections, 0.45);
+            console.log("After NMS:", finalDetections.length);
 
-              console.log("After inference");
+            const oCanvas = overlayCanvasRef.current;
+            if (!oCanvas) return;
 
-              const detections = postprocess(output);
+            const oCtx = oCanvas.getContext("2d");
+            if (!oCtx) return;
 
-              console.log("========== DETECTIONS ==========");
-              console.log("Detection count:", detections.length);
-              console.log(detections);
+            const xScale = oCanvas.width / INPUT_SIZE;
+            const yScale = oCanvas.height / INPUT_SIZE;
 
-            } catch (err) {
-              console.error("Inference Error:", err);
-            }
-          }, 1000);
+            const scaledDetections = finalDetections.map((det) => ({
+              ...det,
+              x: det.x * xScale,
+              y: det.y * yScale,
+              width: det.width * xScale,
+              height: det.height * yScale,
+            }));
+            const poseResult = estimateVehiclePose(scaledDetections, {
+              width: oCanvas.width,
+              height: oCanvas.height,
+            });
+
+            oCtx.clearRect(0, 0, oCanvas.width, oCanvas.height);
+            drawDetections(oCanvas, scaledDetections);
+
+            const currentTime = performance.now();
+            const currentFps = 1000 / (currentTime - previousTime);
+            previousTime = currentTime;
+
+            setFps(currentFps);
+            setInferenceTime(inferenceEnd - inferenceStart);
+            setDetectionCount(scaledDetections.length);
+            setPose(poseResult);
+
+            rafId = window.requestAnimationFrame(inferFrame);
+          }
+
+          rafId = window.requestAnimationFrame(inferFrame);
         };
       } catch (err) {
         console.error(err);
@@ -83,26 +125,50 @@ export default function CameraView() {
     }
 
     startCamera();
+
+    return () => {
+      isMounted = false;
+      if (rafId !== undefined) {
+        window.cancelAnimationFrame(rafId);
+      }
+    };
   }, []);
 
   return (
-    <>
+    <div style={{ position: "relative", width: "100%", height: "100vh", overflow: "hidden" }}>
+      <DebugHUD
+        fps={fps}
+        inferenceTimeMs={inferenceTime}
+        detectionCount={detectionCount}
+        pose={pose}
+      />
+
       <video
         ref={videoRef}
         autoPlay
         playsInline
         muted
         style={{
+          position: "absolute",
+          inset: 0,
           width: "100%",
-          height: "100vh",
+          height: "100%",
           objectFit: "cover",
         }}
       />
 
       <canvas
-        ref={canvasRef}
-        style={{ display: "none" }}
+        ref={overlayCanvasRef}
+        style={{
+          position: "absolute",
+          inset: 0,
+          width: "100%",
+          height: "100%",
+          pointerEvents: "none",
+        }}
       />
-    </>
+
+      <canvas ref={processCanvasRef} style={{ display: "none" }} width={INPUT_SIZE} height={INPUT_SIZE} />
+    </div>
   );
 }
