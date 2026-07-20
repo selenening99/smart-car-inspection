@@ -94,47 +94,6 @@ function GuidedCaptureFlowContent(): JSX.Element {
   const plateNumberError = getPlateNumberError(guidedCapture.plateNumber);
   const canStart = vehicleModelError === undefined && plateNumberError === undefined;
 
-  useEffect(() => {
-    const nextHash = hashForStep(guidedCapture.currentStep);
-
-    if (window.location.hash !== nextHash) {
-      window.location.hash = nextHash.slice(1);
-    }
-  }, [guidedCapture.currentStep]);
-
-  useEffect(() => {
-    const syncFromHash = (): void => {
-      const routeStep = stepFromHash();
-      const canRestore = canRestoreStepFromHash({
-        canStart,
-        completedCount: guidedCapture.completedAngles.length,
-        pendingImageExists: guidedCapture.pendingImage !== undefined,
-        step: routeStep,
-        total: guidedCapture.progress.total,
-      });
-
-      if (!canRestore) {
-        guidedCapture.syncRouteStep('home');
-
-        if (window.location.hash !== '#/app') {
-          window.location.hash = '/app';
-        }
-
-        return;
-      }
-
-      guidedCapture.syncRouteStep(routeStep);
-    };
-
-    syncFromHash();
-    window.addEventListener('hashchange', syncFromHash);
-
-    return () => window.removeEventListener('hashchange', syncFromHash);
-  }, [
-    canStart,
-    guidedCapture,
-  ]);
-
   if (guidedCapture.currentStep === 'capture') {
     return (
       <CapturePage
@@ -190,10 +149,73 @@ function GuidedCaptureFlowContent(): JSX.Element {
   );
 }
 
-export default function GuidedCaptureFlow(): JSX.Element {
+export interface GuidedCaptureFlowProps {
+  routeMode?: 'hash' | 'memory';
+}
+
+function RoutedGuidedCaptureFlowContent({
+  routeMode,
+}: Required<GuidedCaptureFlowProps>): JSX.Element {
+  const guidedCapture = useGuidedCapture();
+  const selectedVehicleId = getVehicleIdForModel(guidedCapture.vehicleModel);
+  const canStart = selectedVehicleId !== undefined
+    && getPlateNumberError(guidedCapture.plateNumber) === undefined;
+
+  useEffect(() => {
+    if (routeMode === 'memory') {
+      return;
+    }
+
+    const nextHash = hashForStep(guidedCapture.currentStep);
+
+    if (window.location.hash !== nextHash) {
+      window.location.hash = nextHash.slice(1);
+    }
+  }, [guidedCapture.currentStep, routeMode]);
+
+  useEffect(() => {
+    if (routeMode === 'memory') {
+      return;
+    }
+
+    const syncFromHash = (): void => {
+      const routeStep = stepFromHash();
+      const canRestore = canRestoreStepFromHash({
+        canStart,
+        completedCount: guidedCapture.completedAngles.length,
+        pendingImageExists: guidedCapture.pendingImage !== undefined,
+        step: routeStep,
+        total: guidedCapture.progress.total,
+      });
+
+      if (!canRestore) {
+        guidedCapture.syncRouteStep('home');
+
+        if (window.location.hash !== '#/app') {
+          window.location.hash = '/app';
+        }
+
+        return;
+      }
+
+      guidedCapture.syncRouteStep(routeStep);
+    };
+
+    syncFromHash();
+    window.addEventListener('hashchange', syncFromHash);
+
+    return () => window.removeEventListener('hashchange', syncFromHash);
+  }, [canStart, guidedCapture, routeMode]);
+
+  return <GuidedCaptureFlowContent />;
+}
+
+export default function GuidedCaptureFlow({
+  routeMode = 'hash',
+}: GuidedCaptureFlowProps): JSX.Element {
   return (
     <GuidedCaptureProvider>
-      <GuidedCaptureFlowContent />
+      <RoutedGuidedCaptureFlowContent routeMode={routeMode} />
     </GuidedCaptureProvider>
   );
 }
