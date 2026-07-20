@@ -9,7 +9,8 @@ export async function loadModel() {
 
   console.log("Loading YOLO model...");
 
-  session = await ort.InferenceSession.create("/best.onnx");
+  const modelPath = `${import.meta.env.BASE_URL}best.onnx`;
+  session = await ort.InferenceSession.create(modelPath);
 
   console.log("Input name:", session.inputNames[0]);
   console.log("Output name:", session.outputNames[0]);

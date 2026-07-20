@@ -677,7 +677,8 @@ export default function CameraTestPage(): React.JSX.Element {
         });
         stream = mediaStream;
         setCameraFacingMode(mediaStream.getVideoTracks()[0]?.getSettings().facingMode ?? CAMERA_FACING_MODE);
-        const session = await ort.InferenceSession.create('/best.onnx', { executionProviders: ['wasm'] });
+        const modelPath = `${import.meta.env.BASE_URL}best.onnx`;
+        const session = await ort.InferenceSession.create(modelPath, { executionProviders: ['wasm'] });
 
         if (!active) {
           mediaStream.getTracks().forEach((track) => track.stop());

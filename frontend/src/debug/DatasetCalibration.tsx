@@ -183,7 +183,7 @@ export function DatasetCalibration(): React.JSX.Element {
       setAnalysis(undefined);
       setError(undefined);
       setCopyStatus(undefined);
-      const session = await ort.InferenceSession.create('/best.onnx', {
+      const session = await ort.InferenceSession.create(`${import.meta.env.BASE_URL}best.onnx`, {
         executionProviders: ['wasm'],
       });
       const records: DatasetRecord[] = [];

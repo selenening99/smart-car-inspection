@@ -130,7 +130,7 @@ export function CalibrationTool(): React.JSX.Element {
         try {
           const letterboxed = letterbox(image, image.naturalWidth, image.naturalHeight);
           const tensor = preprocess(letterboxed);
-          const session = await ort.InferenceSession.create('/best.onnx', {
+          const session = await ort.InferenceSession.create(`${import.meta.env.BASE_URL}best.onnx`, {
             executionProviders: ['wasm'],
           });
           const output = await runDetector(session, tensor);

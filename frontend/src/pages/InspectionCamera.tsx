@@ -230,7 +230,7 @@ export default function InspectionCamera(): React.JSX.Element {
     const start = async (): Promise<void> => {
       try {
         const [session, mediaStream] = await Promise.all([
-          ort.InferenceSession.create('/best.onnx', { executionProviders: ['wasm'] }),
+          ort.InferenceSession.create(`${import.meta.env.BASE_URL}best.onnx`, { executionProviders: ['wasm'] }),
           navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false }),
         ]);
 

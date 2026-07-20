@@ -35,7 +35,7 @@ export function NMSTest(): React.JSX.Element {
         try {
           const letterboxed = letterbox(image, image.naturalWidth, image.naturalHeight);
           const input = preprocess(letterboxed);
-          const session = await ort.InferenceSession.create('/best.onnx', {
+          const session = await ort.InferenceSession.create(`${import.meta.env.BASE_URL}best.onnx`, {
             executionProviders: ['wasm'],
           });
           const output = await runDetector(session, input);

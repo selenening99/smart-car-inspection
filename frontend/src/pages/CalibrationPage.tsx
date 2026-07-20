@@ -197,7 +197,8 @@ export default function CalibrationPage(): React.JSX.Element {
 
     const start = async (): Promise<void> => {
       try {
-        sessionRef.current = await ort.InferenceSession.create('/best.onnx', { executionProviders: ['wasm'] });
+        const modelPath = `${import.meta.env.BASE_URL}best.onnx`;
+        sessionRef.current = await ort.InferenceSession.create(modelPath, { executionProviders: ['wasm'] });
         stream = await navigator.mediaDevices.getUserMedia({
           audio: false,
           video: { facingMode: { ideal: 'environment' } },

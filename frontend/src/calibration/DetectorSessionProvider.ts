@@ -10,7 +10,8 @@ export class DetectorSessionProvider {
 
   public async getSession(): Promise<ort.InferenceSession> {
     if (this.sessionPromise === undefined) {
-      this.sessionPromise = ort.InferenceSession.create('/best.onnx', {
+      const modelPath = `${import.meta.env.BASE_URL}best.onnx`;
+      this.sessionPromise = ort.InferenceSession.create(modelPath, {
         executionProviders: ['wasm'],
       }).catch((error: unknown) => {
         this.sessionPromise = undefined;
