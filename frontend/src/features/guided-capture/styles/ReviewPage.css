@@ -1,0 +1,236 @@
+.guided-review-page {
+  background: #f5f5f7;
+  color: #1d1d1f;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+  min-height: 100vh;
+  padding: max(14px, env(safe-area-inset-top)) 18px max(20px, env(safe-area-inset-bottom));
+}
+
+.guided-review-page__shell {
+  display: grid;
+  gap: 18px;
+  grid-template-rows: auto minmax(0, 1fr) auto auto auto;
+  margin: 0 auto;
+  max-width: 560px;
+  min-height: calc(100vh - 34px);
+  width: 100%;
+}
+
+.review-header {
+  align-items: center;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 78px minmax(0, 1fr) 78px;
+  min-height: 48px;
+}
+
+.review-header__back {
+  appearance: none;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 999px;
+  color: #1d1d1f;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 650;
+  min-height: 44px;
+  padding: 0 16px;
+  transition:
+    background 160ms ease,
+    transform 160ms ease;
+}
+
+.review-header__back:hover {
+  background: #ffffff;
+}
+
+.review-header__back:active {
+  transform: scale(0.97);
+}
+
+.review-header__title {
+  font-size: 21px;
+  font-weight: 680;
+  letter-spacing: -0.03em;
+  overflow: hidden;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.review-header__step {
+  color: #6e6e73;
+  font-size: 15px;
+  font-weight: 680;
+  text-align: right;
+}
+
+.capture-preview {
+  align-items: center;
+  animation: review-preview-fade 420ms ease both;
+  background: #1d1d1f;
+  border-radius: 34px;
+  box-shadow: 0 22px 60px rgba(0, 0, 0, 0.16);
+  display: flex;
+  justify-content: center;
+  min-height: 390px;
+  overflow: hidden;
+  position: relative;
+}
+
+.capture-preview__image {
+  display: block;
+  height: 100%;
+  object-fit: contain;
+  width: 100%;
+}
+
+.capture-preview__placeholder {
+  color: rgba(245, 245, 247, 0.62);
+  font-size: 22px;
+  font-weight: 680;
+  letter-spacing: -0.035em;
+}
+
+.guided-review-page__angle {
+  text-align: center;
+}
+
+.guided-review-page__angle-title {
+  font-size: clamp(28px, 8vw, 34px);
+  font-weight: 760;
+  letter-spacing: -0.055em;
+  line-height: 1.04;
+}
+
+.guided-review-page__angle-step {
+  color: #6e6e73;
+  font-size: 16px;
+  font-weight: 620;
+  letter-spacing: -0.015em;
+  margin-top: 6px;
+}
+
+.guided-review-page__question {
+  text-align: center;
+}
+
+.guided-review-page__question-title {
+  font-size: clamp(21px, 5.8vw, 24px);
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  line-height: 1.15;
+  margin: 0;
+}
+
+.guided-review-page__question-text {
+  color: #6e6e73;
+  font-size: 16px;
+  font-weight: 450;
+  letter-spacing: -0.018em;
+  line-height: 1.35;
+  margin: 9px auto 0;
+  max-width: 21rem;
+}
+
+.review-actions {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: 1fr;
+}
+
+.review-actions__button {
+  appearance: none;
+  border: 0;
+  border-radius: 999px;
+  cursor: pointer;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  min-height: 56px;
+  padding: 0 24px;
+  transition:
+    background 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease;
+  width: 100%;
+}
+
+.review-actions__button--secondary {
+  background: #e8e8ed;
+  color: #1d1d1f;
+}
+
+.review-actions__button--primary {
+  background: #007aff;
+  box-shadow: 0 16px 32px rgba(0, 122, 255, 0.22);
+  color: #ffffff;
+}
+
+.review-actions__button:hover {
+  transform: translateY(-1px);
+}
+
+.review-actions__button:active {
+  transform: scale(0.985);
+}
+
+.review-actions__button:focus-visible,
+.review-header__back:focus-visible {
+  outline: 4px solid rgba(0, 122, 255, 0.22);
+  outline-offset: 3px;
+}
+
+@keyframes review-preview-fade {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.99);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (min-width: 560px) {
+  .review-actions {
+    grid-template-columns: minmax(0, 0.82fr) minmax(0, 1fr);
+  }
+}
+
+@media (min-width: 900px) {
+  .guided-review-page {
+    padding-left: 32px;
+    padding-right: 32px;
+  }
+
+  .guided-review-page__shell {
+    max-width: 680px;
+  }
+
+  .capture-preview {
+    min-height: 480px;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 620px) {
+  .guided-review-page__shell {
+    gap: 12px;
+  }
+
+  .capture-preview {
+    min-height: 260px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .capture-preview {
+    animation: none;
+  }
+
+  .review-actions__button,
+  .review-header__back {
+    transition: none;
+  }
+}

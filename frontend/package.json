@@ -8,7 +8,7 @@
     "build": "tsc -b && vite build",
     "predeploy": "npm run build",
     "deploy": "gh-pages -d dist",
-    "test:calibration": "tsc -p tsconfig.calibration-tests.json && cp calibration-test-package.json dist-calibration-tests/package.json && node --test dist-calibration-tests/calibration/CalibrationSystem.test.js",
+    "test:calibration": "tsc -p tsconfig.calibration-tests.json && cp calibration-test-package.json dist-calibration-tests/package.json && node --test dist-calibration-tests/calibration/CalibrationSystem.test.js dist-calibration-tests/features/guided-capture/integration/FixedCaptureTemplateGeometry.test.js",
     "lint": "eslint .",
     "preview": "vite preview"
   },

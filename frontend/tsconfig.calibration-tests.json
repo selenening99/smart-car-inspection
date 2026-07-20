@@ -23,6 +23,8 @@
     "src/calibration/TargetLayoutGenerator.ts",
     "src/capture/AutoCaptureController.ts",
     "src/capture/uploadCapturedImage.ts",
+    "src/features/guided-capture/integration/FixedCaptureTemplateGeometry.test.ts",
+    "src/features/guided-capture/integration/FixedCaptureTemplateGeometry.ts",
     "src/guide/GuidanceEngine.ts",
     "src/guide/TargetLayout.ts",
     "src/guide/VehicleProfiles.ts",

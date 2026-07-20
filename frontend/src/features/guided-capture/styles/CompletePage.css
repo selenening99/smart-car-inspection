@@ -1,0 +1,216 @@
+.guided-complete-page {
+  background: #f5f5f7;
+  color: #1d1d1f;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+  min-height: 100vh;
+  padding: max(24px, env(safe-area-inset-top)) 18px max(24px, env(safe-area-inset-bottom));
+}
+
+.guided-complete-page__shell {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  justify-content: center;
+  margin: 0 auto;
+  max-width: 640px;
+  min-height: calc(100vh - 48px);
+  width: 100%;
+}
+
+.completion-card {
+  animation: completion-rise 460ms ease both;
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.055);
+  border-radius: 34px;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.1);
+  padding: 30px 24px;
+  text-align: center;
+}
+
+.completion-card__icon {
+  align-items: center;
+  background: #1d1d1f;
+  border-radius: 999px;
+  color: #ffffff;
+  display: inline-flex;
+  font-size: 34px;
+  font-weight: 780;
+  height: 74px;
+  justify-content: center;
+  line-height: 1;
+  margin-bottom: 20px;
+  width: 74px;
+}
+
+.completion-card__title {
+  font-size: clamp(34px, 9vw, 52px);
+  font-weight: 760;
+  letter-spacing: -0.06em;
+  line-height: 0.98;
+  margin: 0;
+}
+
+.completion-card__subtitle {
+  color: #6e6e73;
+  font-size: 17px;
+  letter-spacing: -0.018em;
+  line-height: 1.35;
+  margin: 12px auto 0;
+  max-width: 22rem;
+}
+
+.summary-grid {
+  background: rgba(255, 255, 255, 0.78);
+  border: 1px solid rgba(0, 0, 0, 0.055);
+  border-radius: 28px;
+  box-shadow: 0 18px 54px rgba(0, 0, 0, 0.07);
+  display: grid;
+  gap: 1px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  overflow: hidden;
+}
+
+.summary-grid__item {
+  background: rgba(255, 255, 255, 0.72);
+  padding: 18px;
+}
+
+.summary-grid__label {
+  color: #86868b;
+  font-size: 13px;
+  font-weight: 650;
+  letter-spacing: 0.012em;
+}
+
+.summary-grid__value {
+  color: #1d1d1f;
+  font-size: 19px;
+  font-weight: 720;
+  letter-spacing: -0.03em;
+  margin-top: 6px;
+}
+
+.completion-captures {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.completion-capture-card {
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.055);
+  border-radius: 24px;
+  box-shadow: 0 14px 38px rgba(0, 0, 0, 0.07);
+  overflow: hidden;
+}
+
+.completion-capture-card__preview {
+  align-items: center;
+  aspect-ratio: 4 / 3;
+  background: #e8e8ed;
+  color: #86868b;
+  display: flex;
+  font-size: 13px;
+  font-weight: 700;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.completion-capture-card__image {
+  display: block;
+  height: 100%;
+  object-fit: cover;
+  width: 100%;
+}
+
+.completion-capture-card__label {
+  align-items: center;
+  display: flex;
+  font-size: 17px;
+  font-weight: 720;
+  gap: 8px;
+  letter-spacing: -0.025em;
+  min-height: 54px;
+  padding: 0 16px;
+}
+
+.completion-capture-card__check {
+  color: #1d1d1f;
+  font-weight: 820;
+}
+
+.completion-actions {
+  padding-top: 4px;
+}
+
+.completion-actions__button {
+  appearance: none;
+  background: #007aff;
+  border: 0;
+  border-radius: 999px;
+  box-shadow: 0 16px 34px rgba(0, 122, 255, 0.24);
+  color: #ffffff;
+  cursor: pointer;
+  font-size: 18px;
+  font-weight: 740;
+  letter-spacing: -0.025em;
+  min-height: 58px;
+  padding: 0 24px;
+  transition:
+    box-shadow 160ms ease,
+    transform 160ms ease;
+  width: 100%;
+}
+
+.completion-actions__button:hover {
+  box-shadow: 0 20px 44px rgba(0, 122, 255, 0.28);
+  transform: translateY(-1px);
+}
+
+.completion-actions__button:active {
+  transform: scale(0.985);
+}
+
+.completion-actions__button:focus-visible {
+  outline: 4px solid rgba(0, 122, 255, 0.22);
+  outline-offset: 3px;
+}
+
+@keyframes completion-rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.99);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (max-width: 420px) {
+  .summary-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (min-width: 860px) {
+  .guided-complete-page {
+    padding-left: 32px;
+    padding-right: 32px;
+  }
+
+  .guided-complete-page__shell {
+    max-width: 720px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .completion-card {
+    animation: none;
+  }
+
+  .completion-actions__button {
+    transition: none;
+  }
+}

@@ -115,7 +115,10 @@ export function angleLabel(angle: CaptureAngle): string {
 }
 
 export function isLegacyTargetPoint(target: TargetRegion | LegacyTargetPoint): target is LegacyTargetPoint {
-  return 'tolerance' in target;
+  return !('width' in target)
+    || !('height' in target)
+    || !('toleranceX' in target)
+    || !('toleranceY' in target);
 }
 
 export function deriveTargetRelation(plate: Pick<TargetRegion, 'x' | 'y'>, wheel: Pick<TargetRegion, 'x' | 'y'>): TargetRelation {
