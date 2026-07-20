@@ -1,0 +1,32 @@
+{
+  "compilerOptions": {
+    "target": "es2023",
+    "lib": ["ES2023", "DOM"],
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "ignoreDeprecations": "6.0",
+    "types": ["node"],
+    "skipLibCheck": true,
+    "strict": true,
+    "outDir": "./dist-calibration-tests",
+    "rootDir": "./src",
+    "noUnusedLocals": true,
+    "noUnusedParameters": true
+  },
+  "include": [
+    "src/calibration/CalibrationSystem.test.ts",
+    "src/calibration/CalibrationObservation.ts",
+    "src/calibration/CalibrationOutlierDetector.ts",
+    "src/calibration/CalibrationQuality.ts",
+    "src/calibration/CalibrationStatistics.ts",
+    "src/calibration/LocalStorageCalibrationRepository.ts",
+    "src/calibration/TargetLayoutGenerator.ts",
+    "src/capture/AutoCaptureController.ts",
+    "src/capture/uploadCapturedImage.ts",
+    "src/guide/GuidanceEngine.ts",
+    "src/guide/TargetLayout.ts",
+    "src/guide/VehicleProfiles.ts",
+    "src/ai/postprocess/BoxConverter.ts",
+    "src/pages/CameraAngleValidation.ts"
+  ]
+}

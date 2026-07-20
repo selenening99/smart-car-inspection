@@ -5,7 +5,7 @@ import { runInference } from "../ai/inference";
 import { decoder } from "../ai/decoder";
 import { nonMaximumSuppression } from "../ai/nms";
 import { drawDetections } from "../ai/draw";
-import { estimateVehiclePose } from "../pose";
+import { drawGuideFrame, estimateVehiclePose } from "../pose";
 import type { PoseResult } from "../pose";
 import { DebugHUD } from "../../components/DebugHUD";
 
@@ -19,28 +19,66 @@ export default function CameraView() {
   const [inferenceTime, setInferenceTime] = useState(0);
   const [detectionCount, setDetectionCount] = useState(0);
   const [pose, setPose] = useState<PoseResult>({ pose: "unknown", confidence: 0 });
+  const [cameraDevices, setCameraDevices] = useState<MediaDeviceInfo[]>([]);
+  const [selectedDeviceId, setSelectedDeviceId] = useState("");
 
   useEffect(() => {
     let rafId: number | undefined;
     let isMounted = true;
+    let stream: MediaStream | null = null;
+    let video: HTMLVideoElement | null = null;
 
     async function startCamera() {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            facingMode: "environment",
-          },
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: selectedDeviceId ? { deviceId: { exact: selectedDeviceId } } : true,
           audio: false,
         });
 
-        if (!videoRef.current) return;
+        const currentVideo = videoRef.current;
+        if (!isMounted || !currentVideo) {
+          stream.getTracks().forEach((track) => track.stop());
+          return;
+        }
+        video = currentVideo;
 
-        videoRef.current.srcObject = stream;
+        const [cameraTrack] = stream.getVideoTracks();
+        console.log("camera stream active:", stream.active);
+        console.log("camera track:", {
+          label: cameraTrack?.label,
+          readyState: cameraTrack?.readyState,
+          settings: cameraTrack?.getSettings(),
+        });
 
-        videoRef.current.onloadedmetadata = async () => {
-          if (!videoRef.current) return;
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const videoInputs = devices.filter((device) => device.kind === "videoinput");
+        console.table(
+          videoInputs.map((device) => ({
+            label: device.label,
+            deviceId: device.deviceId,
+          }))
+        );
+        console.log("selected camera device:", cameraTrack?.getSettings().deviceId);
 
-          await videoRef.current.play();
+        if (!isMounted) {
+          stream.getTracks().forEach((track) => track.stop());
+          return;
+        }
+
+        setCameraDevices(videoInputs);
+
+        currentVideo.onloadedmetadata = async () => {
+          if (!isMounted || videoRef.current !== currentVideo) return;
+
+          console.log("metadata loaded");
+          console.log("videoWidth:", currentVideo.videoWidth);
+          console.log("videoHeight:", currentVideo.videoHeight);
+
+          await currentVideo.play();
+
+          console.log("readyState:", currentVideo.readyState);
+          console.log("srcObject:", currentVideo.srcObject);
+          console.log("playback dimensions:", currentVideo.videoWidth, currentVideo.videoHeight);
 
           const session = await loadModel();
           const processCanvas = processCanvasRef.current;
@@ -51,10 +89,11 @@ export default function CameraView() {
           processCanvas.width = INPUT_SIZE;
           processCanvas.height = INPUT_SIZE;
 
-          overlayCanvas.width = videoRef.current.videoWidth;
-          overlayCanvas.height = videoRef.current.videoHeight;
+          overlayCanvas.width = currentVideo.videoWidth;
+          overlayCanvas.height = currentVideo.videoHeight;
 
           let previousTime = performance.now();
+          let frameSampleLogged = false;
 
           async function inferFrame() {
             if (!isMounted) return;
@@ -70,6 +109,20 @@ export default function CameraView() {
 
             // draw video frame into processing canvas synchronously
             pCtx.drawImage(video, 0, 0, INPUT_SIZE, INPUT_SIZE);
+
+            if (!frameSampleLogged) {
+              const pixels = pCtx.getImageData(0, 0, INPUT_SIZE, INPUT_SIZE).data;
+              let brightnessTotal = 0;
+              let sampleCount = 0;
+
+              for (let pixel = 0; pixel < pixels.length; pixel += 4096) {
+                brightnessTotal += pixels[pixel] + pixels[pixel + 1] + pixels[pixel + 2];
+                sampleCount += 3;
+              }
+
+              console.log("first copied frame average channel value:", brightnessTotal / sampleCount);
+              frameSampleLogged = true;
+            }
 
             const tensor = preprocess(pCanvas);
             const inferenceStart = performance.now();
@@ -102,6 +155,7 @@ export default function CameraView() {
             });
 
             oCtx.clearRect(0, 0, oCanvas.width, oCanvas.height);
+            drawGuideFrame(oCanvas, poseResult);
             drawDetections(oCanvas, scaledDetections);
 
             const currentTime = performance.now();
@@ -118,6 +172,16 @@ export default function CameraView() {
 
           rafId = window.requestAnimationFrame(inferFrame);
         };
+
+        currentVideo.onplaying = () => {
+          console.log("video playing:", {
+            readyState: currentVideo.readyState,
+            videoWidth: currentVideo.videoWidth,
+            videoHeight: currentVideo.videoHeight,
+          });
+        };
+
+        currentVideo.srcObject = stream;
       } catch (err) {
         console.error(err);
         alert("Cannot open camera");
@@ -131,8 +195,14 @@ export default function CameraView() {
       if (rafId !== undefined) {
         window.cancelAnimationFrame(rafId);
       }
+      if (stream) {
+        stream.getTracks().forEach((track) => track.stop());
+      }
+      if (video?.srcObject === stream) {
+        video.srcObject = null;
+      }
     };
-  }, []);
+  }, [selectedDeviceId]);
 
   return (
     <div style={{ position: "relative", width: "100%", height: "100vh", overflow: "hidden" }}>
@@ -142,6 +212,35 @@ export default function CameraView() {
         detectionCount={detectionCount}
         pose={pose}
       />
+
+      {cameraDevices.length > 0 && (
+        <div
+          style={{
+            position: "absolute",
+            top: 56,
+            left: 16,
+            display: "flex",
+            gap: 8,
+            zIndex: 60,
+          }}
+        >
+          <select
+            aria-label="Camera device"
+            value={selectedDeviceId}
+            onChange={(event) => setSelectedDeviceId(event.target.value)}
+          >
+            <option value="">Default camera</option>
+            {cameraDevices.map((device, index) => (
+              <option key={device.deviceId} value={device.deviceId}>
+                {device.label || `Camera ${index + 1}`}
+              </option>
+            ))}
+          </select>
+          <button type="button" onClick={() => setSelectedDeviceId(cameraDevices[0].deviceId)}>
+            Use first camera
+          </button>
+        </div>
+      )}
 
       <video
         ref={videoRef}

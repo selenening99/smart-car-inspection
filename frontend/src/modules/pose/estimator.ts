@@ -1,14 +1,10 @@
 import type { Detection } from "../ai/types";
-import type { PoseResult, VehiclePose } from "./types";
+import { GUIDE_FRAMES } from "./guideFrames";
+import type { GuideFrameBox, PoseResult, VehiclePose } from "./types";
 
 interface FrameSize {
   width: number;
   height: number;
-}
-
-interface BoxCenter {
-  x: number;
-  y: number;
 }
 
 const UNKNOWN_POSE: PoseResult = {
@@ -16,43 +12,66 @@ const UNKNOWN_POSE: PoseResult = {
   confidence: 0,
 };
 
-const MIN_POSE_CONFIDENCE = 0.28;
-const MIN_HORIZONTAL_SEPARATION = 0.08;
+const MIN_POSE_CONFIDENCE = 0.42;
 
 function clamp01(value: number) {
   return Math.max(0, Math.min(1, value));
 }
 
-function boxCenter(det: Detection): BoxCenter {
+function normalizeDetection(det: Detection, frame: FrameSize): GuideFrameBox & { confidence: number } {
   return {
-    x: det.x + det.width / 2,
-    y: det.y + det.height / 2,
+    classId: det.classId,
+    label: det.label,
+    x: det.x / frame.width,
+    y: det.y / frame.height,
+    width: det.width / frame.width,
+    height: det.height / frame.height,
+    confidence: det.confidence,
   };
 }
 
-function isLicensePlate(det: Detection) {
-  return det.classId === 0 || det.label.toLowerCase().includes("license");
+function centerX(box: GuideFrameBox) {
+  return box.x + box.width / 2;
 }
 
-function isWheel(det: Detection) {
-  return det.classId === 1 || det.label.toLowerCase().includes("wheel");
+function centerY(box: GuideFrameBox) {
+  return box.y + box.height / 2;
 }
 
-function mean(values: number[]) {
-  return values.reduce((total, value) => total + value, 0) / values.length;
+function boxDistance(a: GuideFrameBox, b: GuideFrameBox) {
+  const centerDistance = Math.abs(centerX(a) - centerX(b)) + Math.abs(centerY(a) - centerY(b));
+  const sizeDistance = Math.abs(a.width - b.width) + Math.abs(a.height - b.height);
+
+  return centerDistance * 0.7 + sizeDistance * 0.3;
 }
 
-function chooseBestLicensePlate(detections: Detection[]) {
-  return detections
-    .filter(isLicensePlate)
-    .sort((a, b) => b.confidence - a.confidence)[0];
-}
+function scoreGuideFrame(
+  guideBoxes: GuideFrameBox[],
+  detections: Array<GuideFrameBox & { confidence: number }>
+) {
+  let totalScore = 0;
+  let matched = 0;
 
-function choosePose(frontOrRear: "front" | "rear", side: "left" | "right"): VehiclePose {
-  if (frontOrRear === "front" && side === "left") return "front_left";
-  if (frontOrRear === "front" && side === "right") return "front_right";
-  if (frontOrRear === "rear" && side === "left") return "rear_left";
-  return "rear_right";
+  for (const guideBox of guideBoxes) {
+    const candidates = detections.filter((det) => det.classId === guideBox.classId);
+
+    if (candidates.length === 0) {
+      continue;
+    }
+
+    const bestCandidate = candidates
+      .map((candidate) => ({
+        candidate,
+        distance: boxDistance(guideBox, candidate),
+      }))
+      .sort((a, b) => a.distance - b.distance)[0];
+
+    const geometryScore = clamp01(1 - bestCandidate.distance / 0.55);
+    totalScore += geometryScore * bestCandidate.candidate.confidence;
+    matched += 1;
+  }
+
+  return matched === guideBoxes.length ? totalScore / guideBoxes.length : 0;
 }
 
 export function estimateVehiclePose(
@@ -63,47 +82,24 @@ export function estimateVehiclePose(
     return UNKNOWN_POSE;
   }
 
-  const plate = chooseBestLicensePlate(detections);
-  const wheels = detections.filter(isWheel);
-
-  if (!plate || wheels.length === 0) {
+  if (detections.length === 0) {
     return UNKNOWN_POSE;
   }
 
-  const plateCenter = boxCenter(plate);
-  const wheelCenters = wheels.map(boxCenter);
-  const wheelCenterX = mean(wheelCenters.map((center) => center.x));
-  const normalizedSeparation = Math.abs(wheelCenterX - plateCenter.x) / frame.width;
+  const normalizedDetections = detections.map((det) => normalizeDetection(det, frame));
+  const bestResult = Object.values(GUIDE_FRAMES)
+    .map((guideFrame) => ({
+      pose: guideFrame.pose,
+      confidence: scoreGuideFrame(guideFrame.boxes, normalizedDetections),
+    }))
+    .sort((a, b) => b.confidence - a.confidence)[0];
 
-  if (normalizedSeparation < MIN_HORIZONTAL_SEPARATION) {
-    return UNKNOWN_POSE;
-  }
-
-  /*
-   * Sprint 2 intentionally reuses the existing detector output. With only
-   * license-plate and wheel boxes, front-vs-rear is a workflow heuristic:
-   * the plate end is treated as front when it lands left of center, rear when
-   * it lands right of center. Wheel offset estimates which vehicle side is
-   * visible. Weak geometry falls back to unknown.
-   */
-  const frontOrRear = plateCenter.x < frame.width / 2 ? "front" : "rear";
-  const side = wheelCenterX > plateCenter.x ? "left" : "right";
-  const separationScore = clamp01((normalizedSeparation - MIN_HORIZONTAL_SEPARATION) / 0.24);
-  const centerOffsetScore = clamp01(Math.abs(plateCenter.x / frame.width - 0.5) / 0.32);
-  const wheelConfidence = mean(wheels.map((wheel) => wheel.confidence));
-  const confidence = clamp01(
-    plate.confidence * 0.45 +
-      wheelConfidence * 0.25 +
-      separationScore * 0.2 +
-      centerOffsetScore * 0.1
-  );
-
-  if (confidence < MIN_POSE_CONFIDENCE) {
+  if (!bestResult || bestResult.confidence < MIN_POSE_CONFIDENCE) {
     return UNKNOWN_POSE;
   }
 
   return {
-    pose: choosePose(frontOrRear, side),
-    confidence,
+    pose: bestResult.pose as VehiclePose,
+    confidence: clamp01(bestResult.confidence),
   };
 }
