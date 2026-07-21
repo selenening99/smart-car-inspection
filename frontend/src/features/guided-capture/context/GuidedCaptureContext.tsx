@@ -3,15 +3,15 @@ import type { VehicleModel } from '../data/vehicleOptions';
 import type { CaptureAngle, CapturedImage, FlowStep, GuidedCaptureSession } from '../types';
 
 const CAPTURE_ORDER: readonly CaptureAngle[] = [
-  'front-left',
   'front-right',
+  'front-left',
   'rear-left',
   'rear-right',
 ];
 
 const INITIAL_SESSION: GuidedCaptureSession = {
   currentStep: 'home',
-  currentAngle: 'front-left',
+  currentAngle: 'front-right',
   vehicleModel: '',
   plateNumber: '',
   completedAngles: [],
@@ -29,6 +29,7 @@ export interface GuidedCaptureContextValue extends GuidedCaptureSession {
   updateVehicleModel: (vehicleModel: VehicleModel | '') => void;
   updatePlateNumber: (plateNumber: string) => void;
   syncRouteStep: (step: FlowStep) => void;
+  selectCaptureAngle: (angle: CaptureAngle) => void;
   startInspection: () => void;
   captureFinished: (image?: string) => void;
   confirmCapture: () => void;
@@ -43,10 +44,8 @@ function getCurrentStepNumber(angle: CaptureAngle): number {
   return CAPTURE_ORDER.indexOf(angle) + 1;
 }
 
-function getNextAngle(angle: CaptureAngle): CaptureAngle | undefined {
-  const nextIndex = CAPTURE_ORDER.indexOf(angle) + 1;
-
-  return CAPTURE_ORDER[nextIndex];
+function getNextIncompleteAngle(completedAngles: readonly CaptureAngle[]): CaptureAngle | undefined {
+  return CAPTURE_ORDER.find((angle) => !completedAngles.includes(angle));
 }
 
 function removeImagesForAngle(
@@ -105,12 +104,30 @@ export function GuidedCaptureProvider({
               currentStep: step,
             });
       },
+      selectCaptureAngle: (angle: CaptureAngle) => {
+        setSession((current) => {
+          if (current.currentStep !== 'capture') {
+            return current;
+          }
+
+          return current.currentAngle === angle
+            ? current
+            : {
+                ...current,
+                currentAngle: angle,
+              };
+        });
+      },
       startInspection: () => {
-        setSession((current) => ({
-          ...current,
-          currentStep: 'capture',
-          currentAngle: current.completedAngles[0] === 'front-left' ? current.currentAngle : 'front-left',
-        }));
+        setSession((current) => {
+          const nextIncompleteAngle = getNextIncompleteAngle(current.completedAngles);
+
+          return {
+            ...current,
+            currentStep: 'capture',
+            currentAngle: nextIncompleteAngle ?? CAPTURE_ORDER[0],
+          };
+        });
       },
       captureFinished: (image?: string) => {
         setSession((current) => {
@@ -135,7 +152,7 @@ export function GuidedCaptureProvider({
           const completedAngles = current.completedAngles.includes(current.currentAngle)
             ? current.completedAngles
             : [...current.completedAngles, current.currentAngle];
-          const nextAngle = getNextAngle(current.currentAngle);
+          const nextAngle = getNextIncompleteAngle(completedAngles);
 
           if (nextAngle === undefined) {
             return {

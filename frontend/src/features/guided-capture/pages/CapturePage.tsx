@@ -16,12 +16,12 @@ const defaultVehicleId: VehicleId = 'yaris';
 
 const orderedCaptureAngles: readonly Pick<CaptureAngleItem, 'id' | 'label'>[] = [
   {
-    id: 'front-left',
-    label: '左前方',
-  },
-  {
     id: 'front-right',
     label: '右前方',
+  },
+  {
+    id: 'front-left',
+    label: '左前方',
   },
   {
     id: 'rear-left',
@@ -39,6 +39,7 @@ export interface CapturePageProps {
   totalSteps?: number;
   completedAngles?: readonly CaptureAngle[];
   onBack?: () => void;
+  onAngleSelect?: (angle: CaptureAngle) => void;
   onCaptureFinished?: (image?: string) => void;
   demoMode?: boolean;
   previewMode?: boolean;
@@ -75,7 +76,7 @@ function PreviewCapturePage({
   currentAngle = 'front-right',
   currentStep = defaultCurrentStep,
   totalSteps = defaultTotalSteps,
-  completedAngles = ['front-left'],
+  completedAngles = [],
   onBack,
 }: CapturePageProps): JSX.Element {
   const progressAngles = useMemo(
@@ -117,18 +118,92 @@ function EngineCapturePage({
   currentAngle = 'front-right',
   currentStep = defaultCurrentStep,
   totalSteps = defaultTotalSteps,
+  completedAngles = [],
+  onBack,
+  onAngleSelect,
   onCaptureFinished,
   vehicleId = defaultVehicleId,
 }: CapturePageProps): JSX.Element {
+  const progressAngles = useMemo(
+    () => createProgressAngles(currentAngle, completedAngles),
+    [completedAngles, currentAngle],
+  );
+  const currentAngleLabel = orderedCaptureAngles.find((angle) => angle.id === currentAngle)?.label ?? '右前方';
+
   return (
-    <CameraTestPage
-      captureAngle={currentAngle}
-      currentStep={currentStep}
-      mode="production"
-      onCaptureFinished={onCaptureFinished}
-      totalSteps={totalSteps}
-      vehicleId={vehicleId}
-    />
+    <main className="guided-capture-screen">
+      <div className="guided-capture-screen__shell">
+        <TopNavigation currentStep={currentStep} onBack={onBack} totalSteps={totalSteps} />
+
+        <section aria-label="相機預覽" className="guided-capture-camera-area">
+          <CameraTestPage
+            captureAngle={currentAngle}
+            currentStep={currentStep}
+            mode="production"
+            onCaptureFinished={onCaptureFinished}
+            totalSteps={totalSteps}
+            vehicleId={vehicleId}
+          />
+        </section>
+
+        <section
+          aria-label="目前拍攝角度"
+          style={{
+            alignItems: 'center',
+            color: '#f5f5f7',
+            display: 'flex',
+            justifyContent: 'space-between',
+            margin: '0 auto',
+            maxWidth: 560,
+            width: '100%',
+          }}
+        >
+          <span
+            style={{
+              color: 'rgba(245, 245, 247, 0.68)',
+              fontSize: 14,
+              fontWeight: 720,
+            }}
+          >
+            目前拍攝
+          </span>
+          <strong
+            style={{
+              fontSize: 24,
+              fontWeight: 840,
+              letterSpacing: '-0.04em',
+            }}
+          >
+            {currentAngleLabel}
+          </strong>
+        </section>
+
+        <section aria-label="拍攝進度" className="guided-capture-bottom">
+          <nav aria-label="拍攝角度選擇" className="capture-progress-bar">
+            {progressAngles.map((angle) => {
+              const completed = completedAngles.includes(angle.id);
+              const current = angle.id === currentAngle;
+
+              return (
+                <button
+                  aria-current={current ? 'step' : undefined}
+                  aria-label={`選擇${angle.label}拍攝角度`}
+                  className={`capture-progress-bar__item capture-progress-bar__item--${angle.state}${current ? ' capture-progress-bar__item--current' : ''}`}
+                  key={angle.id}
+                  onClick={() => onAngleSelect?.(angle.id)}
+                  type="button"
+                >
+                  <span className="capture-progress-bar__dot">
+                    {completed ? '✓' : current ? '●' : '○'}
+                  </span>
+                  <span className="capture-progress-bar__label">{angle.label}</span>
+                </button>
+              );
+            })}
+          </nav>
+        </section>
+      </div>
+    </main>
   );
 }
 

@@ -1,37 +1,70 @@
 .guided-capture-screen {
-  background: #050506;
+  background:
+    radial-gradient(circle at 50% -10%, rgba(255, 255, 255, 0.12), transparent 22rem),
+    linear-gradient(180deg, #17171a 0%, #08080a 48%, #050506 100%);
   color: #f5f5f7;
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+  font-family:
+    -apple-system,
+    BlinkMacSystemFont,
+    "SF Pro Display",
+    "SF Pro Text",
+    "PingFang TC",
+    "Noto Sans TC",
+    "Microsoft JhengHei",
+    "Helvetica Neue",
+    Arial,
+    sans-serif;
   min-height: 100vh;
+  min-height: 100dvh;
   overflow: hidden;
 }
 
 .guided-capture-screen__shell {
-  display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(10px, 1.8vh, 18px);
   min-height: 100vh;
-  padding: max(14px, env(safe-area-inset-top)) 14px max(18px, env(safe-area-inset-bottom));
+  min-height: 100dvh;
+  padding:
+    calc(env(safe-area-inset-top) + 64px)
+    max(14px, env(safe-area-inset-right))
+    calc(env(safe-area-inset-bottom) + 16px)
+    max(14px, env(safe-area-inset-left));
 }
 
 .guided-capture-top-nav {
+  -webkit-backdrop-filter: blur(24px);
   align-items: center;
+  backdrop-filter: blur(24px);
+  background: rgba(5, 5, 6, 0.72);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  box-sizing: border-box;
   display: grid;
   gap: 12px;
   grid-template-columns: 76px minmax(0, 1fr) 76px;
-  min-height: 48px;
-  position: relative;
-  z-index: 5;
+  left: 0;
+  min-height: 58px;
+  padding:
+    env(safe-area-inset-top)
+    max(14px, env(safe-area-inset-right))
+    8px
+    max(14px, env(safe-area-inset-left));
+  position: fixed;
+  right: 0;
+  top: 0;
+  z-index: 30;
 }
 
 .guided-capture-top-nav__back {
   appearance: none;
   background: rgba(255, 255, 255, 0.12);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 999px;
   color: #f5f5f7;
   cursor: pointer;
   font-size: 16px;
-  font-weight: 650;
+  font-weight: 700;
   min-height: 42px;
   padding: 0 16px;
   transition:
@@ -49,14 +82,15 @@
 
 .guided-capture-top-nav__back:focus-visible,
 .bottom-action-bar__button:focus-visible {
-  outline: 4px solid rgba(255, 255, 255, 0.22);
+  outline: 4px solid rgba(255, 255, 255, 0.24);
   outline-offset: 3px;
 }
 
 .guided-capture-top-nav__title {
-  font-size: 17px;
-  font-weight: 720;
-  letter-spacing: -0.025em;
+  color: #ffffff;
+  font-size: 18px;
+  font-weight: 760;
+  letter-spacing: -0.035em;
   overflow: hidden;
   text-align: center;
   text-overflow: ellipsis;
@@ -64,18 +98,151 @@
 }
 
 .guided-capture-top-nav__step {
-  color: rgba(245, 245, 247, 0.78);
+  color: rgba(245, 245, 247, 0.74);
   font-size: 15px;
-  font-weight: 680;
+  font-weight: 760;
   text-align: right;
+  white-space: nowrap;
 }
 
 .guided-capture-camera-area {
   align-items: center;
   display: flex;
+  flex: 1 1 auto;
   justify-content: center;
   min-height: 0;
-  padding: 12px 0 10px;
+  order: 1;
+  padding: 0;
+  width: 100%;
+}
+
+.guided-capture-screen__shell > section[aria-label="目前拍攝角度"] {
+  -webkit-backdrop-filter: blur(22px);
+  align-items: center !important;
+  backdrop-filter: blur(22px);
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.22);
+  box-sizing: border-box;
+  color: #f5f5f7 !important;
+  display: flex !important;
+  justify-content: space-between !important;
+  margin: 0 auto !important;
+  max-width: 560px !important;
+  order: 2;
+  padding: 10px 14px;
+  width: 100% !important;
+}
+
+.guided-capture-screen__shell > section[aria-label="目前拍攝角度"] span {
+  color: rgba(245, 245, 247, 0.68) !important;
+  font-size: 13px !important;
+  font-weight: 760 !important;
+  letter-spacing: 0.02em;
+}
+
+.guided-capture-screen__shell > section[aria-label="目前拍攝角度"] strong {
+  color: #ffffff;
+  font-size: clamp(22px, 6vw, 30px) !important;
+  font-weight: 860 !important;
+  letter-spacing: -0.055em !important;
+  line-height: 1;
+}
+
+.guided-capture-camera-area > main {
+  background: transparent !important;
+  box-sizing: border-box;
+  color: inherit !important;
+  font-family: inherit !important;
+  min-height: 0 !important;
+  padding: 0 !important;
+  width: 100%;
+}
+
+.guided-capture-camera-area > main > header {
+  display: none !important;
+}
+
+.guided-capture-camera-area > main > p[role="alert"] {
+  background: rgba(127, 29, 29, 0.86);
+  border: 1px solid rgba(252, 165, 165, 0.72);
+  border-radius: 18px;
+  color: #fee2e2;
+  font-size: 14px;
+  font-weight: 720;
+  margin: 0 auto 10px;
+  max-width: 560px;
+  padding: 10px 12px;
+}
+
+.guided-capture-camera-area > main > section:first-of-type {
+  background: #000000;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: clamp(28px, 7vw, 40px);
+  box-shadow:
+    0 28px 80px rgba(0, 0, 0, 0.48),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+  box-sizing: border-box;
+  margin: 0 auto !important;
+  max-width: min(100%, 560px) !important;
+  overflow: hidden;
+  position: relative;
+  width: 100%;
+}
+
+.guided-capture-camera-area > main > section:first-of-type > video {
+  border-radius: inherit !important;
+}
+
+.guided-capture-camera-area > main > section:first-of-type > svg {
+  border-radius: inherit;
+}
+
+.guided-capture-camera-area > main > section:first-of-type > aside {
+  -webkit-backdrop-filter: blur(26px);
+  backdrop-filter: blur(26px);
+  background: rgba(10, 10, 12, 0.72) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  border-left: 0 !important;
+  border-radius: 28px !important;
+  bottom: clamp(16px, 5%, 34px) !important;
+  box-shadow: 0 18px 54px rgba(0, 0, 0, 0.34);
+  box-sizing: border-box;
+  color: #ffffff;
+  font-size: clamp(22px, 6.2vw, 34px);
+  font-weight: 840;
+  left: 50% !important;
+  line-height: 1.08;
+  max-width: none !important;
+  padding: 16px 20px !important;
+  position: absolute;
+  text-align: center;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.45);
+  transform: translateX(-50%);
+  width: min(88%, 30rem);
+}
+
+.guided-capture-camera-area > main > section:first-of-type > aside strong {
+  color: #ffffff !important;
+  font-size: clamp(15px, 3.7vw, 18px) !important;
+  letter-spacing: 0.02em;
+  margin-bottom: 8px !important;
+  opacity: 0.72;
+}
+
+.guided-capture-camera-area > main > section:first-of-type > div[style*="border-radius: 50%"] {
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+}
+
+.guided-capture-camera-area > main > section:nth-of-type(2) {
+  margin: 12px auto 0 !important;
+}
+
+.guided-capture-camera-area > main > section:nth-of-type(2) button {
+  min-height: 78px !important;
+  min-width: 78px !important;
 }
 
 .guided-capture-camera-frame {
@@ -143,11 +310,11 @@
 }
 
 .camera-overlay {
+  --guide-frame-inner: rgba(255, 255, 255, 0.96);
+  --guide-frame-outer: rgba(0, 0, 0, 0.52);
   inset: 0;
   pointer-events: none;
   position: absolute;
-  --guide-frame-inner: rgba(255, 255, 255, 0.96);
-  --guide-frame-outer: rgba(0, 0, 0, 0.52);
 }
 
 .camera-overlay--adjusting {
@@ -441,29 +608,50 @@
 
 .guided-capture-bottom {
   display: grid;
-  gap: 16px;
+  gap: 14px;
   margin: 0 auto;
   max-width: 560px;
+  order: 3;
   width: 100%;
 }
 
 .capture-progress-bar {
+  align-items: start;
   display: grid;
-  gap: 10px;
+  gap: 8px;
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 .capture-progress-bar__item {
   align-items: center;
-  color: rgba(245, 245, 247, 0.44);
+  appearance: none;
+  background: transparent;
+  border: 0;
+  color: rgba(245, 245, 247, 0.34);
+  cursor: pointer;
   display: flex;
   flex-direction: column;
-  font-size: 12px;
-  font-weight: 680;
-  gap: 8px;
+  font-size: 11px;
+  font-weight: 720;
+  gap: 7px;
   letter-spacing: -0.01em;
   min-width: 0;
+  padding: 4px 2px;
   text-align: center;
+  transition:
+    color 180ms ease,
+    opacity 180ms ease,
+    transform 180ms ease;
+}
+
+.capture-progress-bar__item:active {
+  transform: scale(0.97);
+}
+
+.capture-progress-bar__item:focus-visible {
+  border-radius: 14px;
+  outline: 3px solid rgba(255, 255, 255, 0.24);
+  outline-offset: 4px;
 }
 
 .capture-progress-bar__label {
@@ -475,23 +663,26 @@
 
 .capture-progress-bar__dot {
   align-items: center;
-  background: rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 999px;
-  color: #050506;
+  color: rgba(245, 245, 247, 0.45);
   display: flex;
   font-size: 12px;
   font-weight: 900;
-  height: 22px;
+  height: 24px;
   justify-content: center;
-  width: 22px;
+  width: 24px;
 }
 
 .capture-progress-bar__item--completed {
-  color: rgba(245, 245, 247, 0.84);
+  color: rgba(245, 245, 247, 0.72);
 }
 
 .capture-progress-bar__item--completed .capture-progress-bar__dot {
-  background: rgba(245, 245, 247, 0.88);
+  background: rgba(48, 209, 88, 0.2);
+  border-color: rgba(48, 209, 88, 0.38);
+  color: #9ef0b2;
 }
 
 .capture-progress-bar__item--current {
@@ -500,7 +691,11 @@
 
 .capture-progress-bar__item--current .capture-progress-bar__dot {
   background: #ffffff;
-  box-shadow: 0 0 0 6px rgba(255, 255, 255, 0.12);
+  border-color: #ffffff;
+  box-shadow:
+    0 0 0 6px rgba(255, 255, 255, 0.12),
+    0 8px 24px rgba(255, 255, 255, 0.14);
+  color: #050506;
 }
 
 .bottom-action-bar {
@@ -581,8 +776,20 @@
 }
 
 @media (max-height: 720px) {
-  .guided-capture-camera-frame {
-    min-height: 380px;
+  .guided-capture-screen__shell {
+    gap: 8px;
+    padding-bottom: calc(env(safe-area-inset-bottom) + 12px);
+  }
+
+  .guided-capture-screen__shell > section[aria-label="目前拍攝角度"] {
+    padding-bottom: 8px;
+    padding-top: 8px;
+  }
+
+  .guided-capture-camera-area > main > section:first-of-type > aside {
+    border-radius: 22px !important;
+    font-size: clamp(19px, 5.4vw, 28px);
+    padding: 12px 16px !important;
   }
 
   .guide-card {
@@ -592,14 +799,11 @@
 
 @media (min-width: 860px) {
   .guided-capture-screen__shell {
+    margin: 0 auto;
+    max-width: 680px;
     padding-left: 28px;
     padding-right: 28px;
   }
-
-  .guided-capture-camera-frame {
-    aspect-ratio: 3 / 4;
-  }
-
 }
 
 @media (prefers-reduced-motion: reduce) {

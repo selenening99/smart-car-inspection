@@ -99,8 +99,9 @@ function GuidedCaptureFlowContent(): JSX.Element {
       <CapturePage
         completedAngles={guidedCapture.completedAngles}
         currentAngle={guidedCapture.currentAngle}
-        currentStep={guidedCapture.progress.currentStepNumber}
+        currentStep={guidedCapture.progress.completed}
         onBack={guidedCapture.goBack}
+        onAngleSelect={guidedCapture.selectCaptureAngle}
         onCaptureFinished={guidedCapture.captureFinished}
         totalSteps={guidedCapture.progress.total}
         vehicleId={selectedVehicleId}
