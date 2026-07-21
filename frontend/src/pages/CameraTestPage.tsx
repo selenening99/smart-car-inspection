@@ -475,6 +475,7 @@ export default function CameraTestPage({
 
     captureInProgressRef.current = true;
     context.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const imageDataUrl = canvas.toDataURL('image/jpeg', 0.9);
     canvas.toBlob((blob) => {
       captureInProgressRef.current = false;
 
@@ -513,7 +514,7 @@ export default function CameraTestPage({
       setConfirmationMessage(undefined);
       setCountdown(undefined);
       if (productionMode) {
-        onCaptureFinished?.(previewUrl);
+        onCaptureFinished?.(imageDataUrl);
       }
 
       if (source === 'automatic') {
