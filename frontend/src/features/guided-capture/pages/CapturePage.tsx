@@ -115,14 +115,18 @@ function PreviewCapturePage({
 
 function EngineCapturePage({
   currentAngle = 'front-right',
+  currentStep = defaultCurrentStep,
+  totalSteps = defaultTotalSteps,
   onCaptureFinished,
   vehicleId = defaultVehicleId,
 }: CapturePageProps): JSX.Element {
   return (
     <CameraTestPage
       captureAngle={currentAngle}
+      currentStep={currentStep}
       mode="production"
       onCaptureFinished={onCaptureFinished}
+      totalSteps={totalSteps}
       vehicleId={vehicleId}
     />
   );

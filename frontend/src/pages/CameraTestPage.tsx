@@ -34,6 +34,8 @@ export interface CameraTestPageProps {
   mode?: 'engineering' | 'production';
   vehicleId?: VehicleId;
   captureAngle?: CaptureAngle;
+  currentStep?: number;
+  totalSteps?: number;
   onCaptureFinished?: (image?: string) => void;
 }
 
@@ -346,6 +348,8 @@ export default function CameraTestPage({
   mode = 'engineering',
   vehicleId = DEFAULT_VEHICLE_ID,
   captureAngle = 'rear-right',
+  currentStep = 1,
+  totalSteps = 4,
   onCaptureFinished,
 }: CameraTestPageProps): React.JSX.Element {
   const productionMode = mode === 'production';
@@ -781,6 +785,17 @@ export default function CameraTestPage({
             <strong style={{ color: '#f8fafc', fontSize: 24, lineHeight: 1 }}>{selectedAngleLabel}</strong>
           </section>
         </>
+      )}
+
+      {productionMode && (
+        <header style={{ alignItems: 'center', display: 'flex', justifyContent: 'space-between', margin: '0 auto 10px', maxWidth: 1100 }}>
+          <strong style={{ color: '#f8fafc', fontSize: 28, lineHeight: 1 }}>
+            {selectedAngleLabel}
+          </strong>
+          <span style={{ color: '#cbd5e1', fontSize: 16, fontWeight: 800 }}>
+            第 {currentStep} / {totalSteps} 張
+          </span>
+        </header>
       )}
 
       {cameraError !== undefined && (
