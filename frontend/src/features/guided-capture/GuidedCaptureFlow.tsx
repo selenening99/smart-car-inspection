@@ -8,6 +8,11 @@ import HomePage from './pages/HomePage';
 import ReviewPage from './pages/ReviewPage';
 import { getVehicleIdForModel } from './data/vehicleOptions';
 import type { FlowStep } from './types';
+import {
+  createRental,
+  generateRentalId,
+  uploadPickupInspection,
+} from '../../services/uploadPickupInspection';
 
 function normalizePlateNumber(value: string): string {
   return value.trim().toUpperCase().slice(0, 10);
@@ -85,6 +90,58 @@ function canRestoreStepFromHash({
 
 function GuidedCaptureFlowContent(): JSX.Element {
   const guidedCapture = useGuidedCapture();
+
+  const handleUploadAndFinish = async (): Promise<void> => {
+    const vehicleId = guidedCapture.plateNumber;
+
+    if (vehicleId === '') {
+      console.error('Firebase upload aborted: plate number is empty');
+      return;
+    }
+
+    if (guidedCapture.capturedImages.length !== 4) {
+      console.error(
+        `Firebase upload aborted: expected 4 images, received ${guidedCapture.capturedImages.length}`,
+      );
+      return;
+    }
+
+    const rentalId = generateRentalId(vehicleId);
+
+    try {
+      console.log('Firebase upload started', {
+        rentalId,
+        vehicleId,
+        imageCount: guidedCapture.capturedImages.length,
+      });
+
+      await createRental(rentalId, vehicleId);
+
+      console.log('Firebase rental created', {
+        rentalId,
+      });
+
+      await uploadPickupInspection({
+        rentalId,
+        vehicleId,
+        capturedImages: guidedCapture.capturedImages,
+        gps: {
+          lat: null,
+          lng: null,
+        },
+      });
+
+      console.log('Firebase upload completed', {
+        rentalId,
+        vehicleId,
+      });
+
+      guidedCapture.resetInspection();
+    } catch (error) {
+      console.error('Firebase upload failed', error);
+    }
+  };
+
   const selectedVehicleId = getVehicleIdForModel(guidedCapture.vehicleModel);
   const vehicleModelError = guidedCapture.vehicleModel === ''
     ? '請選擇車型'
@@ -128,7 +185,9 @@ function GuidedCaptureFlowContent(): JSX.Element {
       <CompletePage
         capturedImages={guidedCapture.capturedImages}
         completed={guidedCapture.progress.completed}
-        onDone={guidedCapture.resetInspection}
+        onDone={() => {
+          void handleUploadAndFinish();
+        }}
         plateNumber={guidedCapture.plateNumber}
         total={guidedCapture.progress.total}
         vehicleName={guidedCapture.vehicleModel}
