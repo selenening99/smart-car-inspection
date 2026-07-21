@@ -97,8 +97,17 @@
 
 .guided-capture-camera-frame--engine {
   aspect-ratio: auto;
-  max-height: calc(100vh - 238px);
+  max-height: none;
   min-height: 0;
+}
+
+.guided-capture-camera-frame__video-layer {
+  background: #000000;
+  border-radius: inherit;
+  line-height: 0;
+  overflow: hidden;
+  position: relative;
+  width: 100%;
 }
 
 .guided-capture-camera-frame__placeholder {
@@ -124,6 +133,8 @@
 
 .guided-capture-camera-frame__video--engine {
   height: auto;
+  inset: auto;
+  object-fit: contain;
   position: relative;
 }
 

@@ -26,9 +26,16 @@ import {
   validateSelectedAngleLayout,
 } from './CameraAngleValidation';
 
-const VEHICLE_ID: VehicleId = 'yaris';
+const DEFAULT_VEHICLE_ID: VehicleId = 'yaris';
 const CONFIDENCE_THRESHOLD = 0.25;
 const IOU_THRESHOLD = 0.45;
+
+export interface CameraTestPageProps {
+  mode?: 'engineering' | 'production';
+  vehicleId?: VehicleId;
+  captureAngle?: CaptureAngle;
+  onCaptureFinished?: (image?: string) => void;
+}
 
 interface CameraFrame {
   width: number;
@@ -335,7 +342,13 @@ function formatPairGeometry(pair: PairGeometry | undefined): {
  * only; every image-processing and guidance operation is delegated to the
  * existing v2 pipeline modules.
  */
-export default function CameraTestPage(): React.JSX.Element {
+export default function CameraTestPage({
+  mode = 'engineering',
+  vehicleId = DEFAULT_VEHICLE_ID,
+  captureAngle = 'rear-right',
+  onCaptureFinished,
+}: CameraTestPageProps): React.JSX.Element {
+  const productionMode = mode === 'production';
   const videoRef = useRef<HTMLVideoElement>(null);
   const captureCanvasRef = useRef<HTMLCanvasElement>(null);
   const autoCaptureRef = useRef<AutoCaptureController | null>(null);
@@ -344,13 +357,13 @@ export default function CameraTestPage(): React.JSX.Element {
   const captureInProgressRef = useRef(false);
   const previewUrlRef = useRef<string | undefined>(undefined);
   const guidanceRef = useRef<GuidanceState | undefined>(undefined);
-  const selectedAngleRef = useRef<CaptureAngle>('rear-right');
-  const targetLayoutRef = useRef(getTargetLayout(VEHICLE_ID, 'rear-right'));
-  const layoutGuardRef = useRef(validateSelectedAngleLayout('rear-right', targetLayoutRef.current));
+  const selectedAngleRef = useRef<CaptureAngle>(captureAngle);
+  const targetLayoutRef = useRef(getTargetLayout(vehicleId, captureAngle));
+  const layoutGuardRef = useRef(validateSelectedAngleLayout(captureAngle, targetLayoutRef.current));
   const [frame, setFrame] = useState<CameraFrame>({ width: 1, height: 1 });
   const [detections, setDetections] = useState<BoxDetection[]>([]);
   const [guidance, setGuidance] = useState<GuidanceState>();
-  const [selectedCaptureAngle, setSelectedCaptureAngle] = useState<CaptureAngle>('rear-right');
+  const [selectedCaptureAngle, setSelectedCaptureAngle] = useState<CaptureAngle>(captureAngle);
   const [fps, setFps] = useState(0);
   const [inferenceTime, setInferenceTime] = useState(0);
   const [autoCaptureState, setAutoCaptureState] = useState<AutoCaptureState>(AutoCaptureState.Idle);
@@ -361,8 +374,8 @@ export default function CameraTestPage(): React.JSX.Element {
   const [confirming, setConfirming] = useState(false);
   const [confirmationMessage, setConfirmationMessage] = useState<string>();
 
-  const profile = useMemo(() => getVehicleProfile(VEHICLE_ID), []);
-  const targetLayout = useMemo(() => getTargetLayout(VEHICLE_ID, selectedCaptureAngle), [selectedCaptureAngle]);
+  const profile = useMemo(() => getVehicleProfile(vehicleId), [vehicleId]);
+  const targetLayout = useMemo(() => getTargetLayout(vehicleId, selectedCaptureAngle), [selectedCaptureAngle, vehicleId]);
   const layoutGuard = useMemo(
     () => validateSelectedAngleLayout(selectedCaptureAngle, targetLayout),
     [selectedCaptureAngle, targetLayout],
@@ -396,6 +409,12 @@ export default function CameraTestPage(): React.JSX.Element {
     () => createVehicleSizeDebug(detections, frame, targetLayout.expectedVehicleSize),
     [detections, frame, targetLayout],
   );
+
+  useEffect(() => {
+    if (productionMode) {
+      setSelectedCaptureAngle(captureAngle);
+    }
+  }, [captureAngle, productionMode]);
 
   useEffect(() => {
     selectedAngleRef.current = selectedCaptureAngle;
@@ -476,7 +495,7 @@ export default function CameraTestPage(): React.JSX.Element {
       const previewUrl = URL.createObjectURL(blob);
       const uploadInput: UploadCapturedImageInput = createCapturedImageUploadInput({
         blob,
-        vehicleId: VEHICLE_ID,
+        vehicleId,
         selectedAngle: currentAngle,
         captureSource: source,
         guidance: currentGuidance,
@@ -489,6 +508,9 @@ export default function CameraTestPage(): React.JSX.Element {
       setCapturedImage({ previewUrl, uploadInput });
       setConfirmationMessage(undefined);
       setCountdown(undefined);
+      if (productionMode) {
+        onCaptureFinished?.(previewUrl);
+      }
 
       if (source === 'automatic') {
         controller.complete();
@@ -496,7 +518,7 @@ export default function CameraTestPage(): React.JSX.Element {
 
       setAutoCaptureState(controller.state);
     }, 'image/png');
-  }, []);
+  }, [onCaptureFinished, productionMode, vehicleId]);
 
   const handleRetake = useCallback((): void => {
     const controller = autoCaptureRef.current;
@@ -624,7 +646,7 @@ export default function CameraTestPage(): React.JSX.Element {
           recovered,
           video.videoWidth,
           video.videoHeight,
-          VEHICLE_ID,
+          vehicleId,
           currentAngle,
         );
         guidanceRef.current = nextGuidance;
@@ -718,7 +740,7 @@ export default function CameraTestPage(): React.JSX.Element {
         video.srcObject = null;
       }
     };
-  }, [updateVideoFrame]);
+  }, [updateVideoFrame, vehicleId]);
 
   const plateConfidence = highestConfidence(detections, 0);
   const wheelConfidence = highestConfidence(detections, 1);
@@ -741,21 +763,25 @@ export default function CameraTestPage(): React.JSX.Element {
 
   return (
     <main style={{ background: '#0b1120', color: '#f9fafb', fontFamily: 'system-ui, sans-serif', minHeight: '100vh', padding: 16 }}>
-      <header style={{ margin: '0 auto 14px', maxWidth: 1100 }}>
-        <p style={{ color: '#93c5fd', fontSize: 14, fontWeight: 700, margin: '0 0 4px' }}>自動拍攝</p>
-        <h1 style={{ fontSize: 30, lineHeight: 1.1, margin: 0 }}>AI 驗車拍攝</h1>
-        <p style={{ color: '#cbd5e1', margin: '8px 0 0' }}>
-          請依畫面引導完成拍攝
-        </p>
-      </header>
+      {!productionMode && (
+        <>
+          <header style={{ margin: '0 auto 14px', maxWidth: 1100 }}>
+            <p style={{ color: '#93c5fd', fontSize: 14, fontWeight: 700, margin: '0 0 4px' }}>自動拍攝</p>
+            <h1 style={{ fontSize: 30, lineHeight: 1.1, margin: 0 }}>AI 驗車拍攝</h1>
+            <p style={{ color: '#cbd5e1', margin: '8px 0 0' }}>
+              請依畫面引導完成拍攝
+            </p>
+          </header>
 
-      <section aria-label="目前拍攝角度" style={{ alignItems: 'center', background: 'rgba(15, 23, 42, 0.88)', border: '1px solid #334155', borderRadius: 8, display: 'flex', gap: 12, justifyContent: 'space-between', margin: '0 auto 10px', maxWidth: 1100, padding: '10px 12px' }}>
-        <div>
-          <div style={{ color: '#bfdbfe', fontSize: 15, fontWeight: 900 }}>{profile.displayName}</div>
-          <div style={{ color: '#94a3b8', fontSize: 12, fontWeight: 700, marginTop: 2 }}>目前拍攝角度</div>
-        </div>
-        <strong style={{ color: '#f8fafc', fontSize: 24, lineHeight: 1 }}>{selectedAngleLabel}</strong>
-      </section>
+          <section aria-label="目前拍攝角度" style={{ alignItems: 'center', background: 'rgba(15, 23, 42, 0.88)', border: '1px solid #334155', borderRadius: 8, display: 'flex', gap: 12, justifyContent: 'space-between', margin: '0 auto 10px', maxWidth: 1100, padding: '10px 12px' }}>
+            <div>
+              <div style={{ color: '#bfdbfe', fontSize: 15, fontWeight: 900 }}>{profile.displayName}</div>
+              <div style={{ color: '#94a3b8', fontSize: 12, fontWeight: 700, marginTop: 2 }}>目前拍攝角度</div>
+            </div>
+            <strong style={{ color: '#f8fafc', fontSize: 24, lineHeight: 1 }}>{selectedAngleLabel}</strong>
+          </section>
+        </>
+      )}
 
       {cameraError !== undefined && (
         <p role="alert" style={{ background: 'rgba(127, 29, 29, 0.72)', border: '1px solid #fca5a5', borderRadius: 6, color: '#fee2e2', margin: '0 auto 14px', maxWidth: 1100, padding: '10px 12px' }}>
@@ -779,52 +805,58 @@ export default function CameraTestPage(): React.JSX.Element {
           style={{ height: '100%', inset: 0, pointerEvents: 'none', position: 'absolute', width: '100%' }}
           viewBox={`0 0 ${frame.width} ${frame.height}`}
         >
-          <line
-            stroke={targetPairLineColor}
-            strokeDasharray="12 10"
-            strokeLinecap="round"
-            strokeOpacity="0.72"
-            strokeWidth="3"
-            x1={plateVisual.targetPixel.x}
-            x2={wheelVisual.targetPixel.x}
-            y1={plateVisual.targetPixel.y}
-            y2={wheelVisual.targetPixel.y}
-          />
+          {!productionMode && (
+            <line
+              stroke={targetPairLineColor}
+              strokeDasharray="12 10"
+              strokeLinecap="round"
+              strokeOpacity="0.72"
+              strokeWidth="3"
+              x1={plateVisual.targetPixel.x}
+              x2={wheelVisual.targetPixel.x}
+              y1={plateVisual.targetPixel.y}
+              y2={wheelVisual.targetPixel.y}
+            />
+          )}
           {targetVisuals.map((target) => {
             const activeColor = target.insideTolerance ? '#22c55e' : '#ffffff';
             const centerLabelY = Math.max(24, target.rectangle.y - 10);
 
             return (
               <g key={target.key}>
-                <circle
-                  cx={target.targetPixel.x}
-                  cy={target.targetPixel.y}
-                  fill="rgba(255, 255, 255, 0.04)"
-                  r={target.radius}
-                  stroke={activeColor}
-                  strokeDasharray="8 8"
-                  strokeOpacity="0.78"
-                  strokeWidth="2"
-                />
+                {!productionMode && (
+                  <circle
+                    cx={target.targetPixel.x}
+                    cy={target.targetPixel.y}
+                    fill="rgba(255, 255, 255, 0.04)"
+                    r={target.radius}
+                    stroke={activeColor}
+                    strokeDasharray="8 8"
+                    strokeOpacity="0.78"
+                    strokeWidth="2"
+                  />
+                )}
                 <rect
-                  fill={target.insideTolerance ? 'rgba(34, 197, 94, 0.12)' : 'rgba(255, 255, 255, 0.06)'}
+                  fill={productionMode ? 'transparent' : target.insideTolerance ? 'rgba(34, 197, 94, 0.12)' : 'rgba(255, 255, 255, 0.06)'}
                   height={target.rectangle.height}
                   rx="4"
                   stroke={activeColor}
-                  strokeDasharray="14 10"
+                  strokeDasharray={productionMode ? undefined : '14 10'}
                   strokeWidth="5"
                   width={target.rectangle.width}
                   x={target.rectangle.x}
                   y={target.rectangle.y}
                 />
-                <circle
-                  cx={target.targetPixel.x}
-                  cy={target.targetPixel.y}
-                  fill="rgba(15, 23, 42, 0.35)"
-                  r="12"
-                  stroke="#ffffff"
-                  strokeWidth="4"
-                />
+                {!productionMode && (
+                  <circle
+                    cx={target.targetPixel.x}
+                    cy={target.targetPixel.y}
+                    fill="rgba(15, 23, 42, 0.35)"
+                    r="12"
+                    stroke="#ffffff"
+                    strokeWidth="4"
+                  />
+                )}
                 <text
                   fill={activeColor}
                   fontSize="18"
@@ -835,50 +867,53 @@ export default function CameraTestPage(): React.JSX.Element {
                   x={target.rectangle.x + 8}
                   y={centerLabelY}
                 >
-                  {target.label}目標區
+                  {productionMode ? target.label : `${target.label}目標區`}
                 </text>
               </g>
             );
           })}
         </svg>
 
-        <svg
-          aria-label="對準偏移"
-          preserveAspectRatio="none"
-          style={{ height: '100%', inset: 0, pointerEvents: 'none', position: 'absolute', width: '100%' }}
-          viewBox={`0 0 ${frame.width} ${frame.height}`}
-        >
-          {targetVisuals.map((target) => {
-            if (target.currentPixel === undefined) {
-              return null;
-            }
+        {!productionMode && (
+          <svg
+            aria-label="對準偏移"
+            preserveAspectRatio="none"
+            style={{ height: '100%', inset: 0, pointerEvents: 'none', position: 'absolute', width: '100%' }}
+            viewBox={`0 0 ${frame.width} ${frame.height}`}
+          >
+            {targetVisuals.map((target) => {
+              if (target.currentPixel === undefined) {
+                return null;
+              }
 
-            const color = target.insideTolerance ? '#22c55e' : '#ffffff';
+              const color = target.insideTolerance ? '#22c55e' : '#ffffff';
 
-            return (
-              <g key={target.key}>
-                <line
-                  stroke={color}
-                  strokeLinecap="round"
-                  strokeOpacity="0.92"
-                  strokeWidth="2"
-                  x1={target.targetPixel.x}
-                  x2={target.currentPixel.x}
-                  y1={target.targetPixel.y}
-                  y2={target.currentPixel.y}
-                />
-                <circle cx={target.currentPixel.x} cy={target.currentPixel.y} fill={target.color} r="8" stroke="#0f172a" strokeWidth="3" />
-              </g>
-            );
-          })}
-        </svg>
+              return (
+                <g key={target.key}>
+                  <line
+                    stroke={color}
+                    strokeLinecap="round"
+                    strokeOpacity="0.92"
+                    strokeWidth="2"
+                    x1={target.targetPixel.x}
+                    x2={target.currentPixel.x}
+                    y1={target.targetPixel.y}
+                    y2={target.currentPixel.y}
+                  />
+                  <circle cx={target.currentPixel.x} cy={target.currentPixel.y} fill={target.color} r="8" stroke="#0f172a" strokeWidth="3" />
+                </g>
+              );
+            })}
+          </svg>
+        )}
 
-        <svg
-          aria-label="AI 偵測框"
-          preserveAspectRatio="none"
-          style={{ height: '100%', inset: 0, pointerEvents: 'none', position: 'absolute', width: '100%' }}
-          viewBox={`0 0 ${frame.width} ${frame.height}`}
-        >
+        {!productionMode && (
+          <svg
+            aria-label="AI 偵測框"
+            preserveAspectRatio="none"
+            style={{ height: '100%', inset: 0, pointerEvents: 'none', position: 'absolute', width: '100%' }}
+            viewBox={`0 0 ${frame.width} ${frame.height}`}
+          >
           {plateVisual.currentPixel !== undefined && wheelVisual.currentPixel !== undefined && (
             <line
               stroke={detectedPairLineColor}
@@ -906,7 +941,8 @@ export default function CameraTestPage(): React.JSX.Element {
               </g>
             );
           })}
-        </svg>
+          </svg>
+        )}
 
         <aside style={{ background: 'rgba(15, 23, 42, 0.88)', borderLeft: `5px solid ${guidance?.ready ? '#22c55e' : '#f59e0b'}`, borderRadius: 8, bottom: 16, left: 16, maxWidth: '78%', padding: '12px 14px', position: 'absolute' }}>
           <strong style={{ color: guidance?.ready ? '#86efac' : '#fde68a', display: 'block', fontSize: 18, marginBottom: 4 }}>
@@ -922,7 +958,7 @@ export default function CameraTestPage(): React.JSX.Element {
           </div>
         )}
 
-        {capturedImage !== undefined && (
+        {!productionMode && capturedImage !== undefined && (
           <div style={{ alignItems: 'center', background: 'rgba(2, 6, 23, 0.92)', borderRadius: 8, display: 'flex', inset: 0, justifyContent: 'center', padding: 18, position: 'absolute' }}>
             <section style={{ maxWidth: 720, width: '100%' }}>
               <h2 style={{ fontSize: 24, margin: '0 0 12px' }}>拍攝結果</h2>
@@ -941,38 +977,40 @@ export default function CameraTestPage(): React.JSX.Element {
         )}
       </section>
 
-      <section aria-label="拍攝角度選擇" style={{ margin: '14px auto 0', maxWidth: 1100 }}>
-        <div style={{ display: 'grid', gap: 8, gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' }}>
-          {CAMERA_CAPTURE_ANGLES.map((angle) => {
-            const selected = angle === selectedCaptureAngle;
+      {!productionMode && (
+        <section aria-label="拍攝角度選擇" style={{ margin: '14px auto 0', maxWidth: 1100 }}>
+          <div style={{ display: 'grid', gap: 8, gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' }}>
+            {CAMERA_CAPTURE_ANGLES.map((angle) => {
+              const selected = angle === selectedCaptureAngle;
 
-            return (
-              <button
-                aria-label={`選擇${angleLabel(angle)}拍攝角度`}
-                aria-pressed={selected}
-                key={angle}
-                onClick={() => setSelectedCaptureAngle(angle)}
-                style={{
-                  background: selected ? '#2563eb' : 'rgba(15, 23, 42, 0.72)',
-                  border: selected ? '1px solid #60a5fa' : '1px solid #475569',
-                  borderRadius: 8,
-                  boxShadow: selected ? '0 10px 24px rgba(37, 99, 235, 0.28)' : 'none',
-                  color: selected ? '#ffffff' : '#e2e8f0',
-                  cursor: 'pointer',
-                  fontSize: 17,
-                  fontWeight: 900,
-                  minHeight: 52,
-                  padding: '12px 10px',
-                  width: '100%',
-                }}
-                type="button"
-              >
-                {angleLabel(angle)}
-              </button>
-            );
-          })}
-        </div>
-      </section>
+              return (
+                <button
+                  aria-label={`選擇${angleLabel(angle)}拍攝角度`}
+                  aria-pressed={selected}
+                  key={angle}
+                  onClick={() => setSelectedCaptureAngle(angle)}
+                  style={{
+                    background: selected ? '#2563eb' : 'rgba(15, 23, 42, 0.72)',
+                    border: selected ? '1px solid #60a5fa' : '1px solid #475569',
+                    borderRadius: 8,
+                    boxShadow: selected ? '0 10px 24px rgba(37, 99, 235, 0.28)' : 'none',
+                    color: selected ? '#ffffff' : '#e2e8f0',
+                    cursor: 'pointer',
+                    fontSize: 17,
+                    fontWeight: 900,
+                    minHeight: 52,
+                    padding: '12px 10px',
+                    width: '100%',
+                  }}
+                  type="button"
+                >
+                  {angleLabel(angle)}
+                </button>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       {capturedImage === undefined && (
         <section style={{ alignItems: 'center', display: 'flex', flexDirection: 'column', gap: 12, margin: '18px auto 8px', maxWidth: 1100 }}>
@@ -990,6 +1028,7 @@ export default function CameraTestPage(): React.JSX.Element {
         </section>
       )}
 
+      {!productionMode && (
       <details style={{ background: 'rgba(15, 23, 42, 0.78)', border: layoutGuard.valid ? '1px solid #334155' : '2px solid #f87171', borderRadius: 8, margin: '18px auto 0', maxWidth: 1100, padding: '12px 14px' }}>
         <summary style={{ cursor: 'pointer', fontWeight: 800 }}>拍攝資訊</summary>
         <section aria-label="拍攝資訊內容" style={{ display: 'grid', gap: 14, gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', marginTop: 14 }}>
@@ -998,10 +1037,10 @@ export default function CameraTestPage(): React.JSX.Element {
             <div><strong>目前驗證</strong><br />{profile.displayName}・{selectedAngleLabel}</div>
             <div style={{ marginTop: 8 }}><strong>拍攝站位</strong><br />請站在車輛本身的{selectedAngleLabel}拍攝</div>
             <div style={{ marginTop: 8 }}><strong>Vehicle</strong><br />{profile.displayName}</div>
-            <div style={{ marginTop: 8 }}><strong>Vehicle ID</strong><br />{VEHICLE_ID}</div>
+            <div style={{ marginTop: 8 }}><strong>Vehicle ID</strong><br />{vehicleId}</div>
             <div style={{ marginTop: 8 }}><strong>Capture Angle</strong><br />{selectedAngleLabel}</div>
             <div style={{ marginTop: 8 }}><strong>Angle ID</strong><br />{selectedCaptureAngle}</div>
-            <div style={{ marginTop: 8 }}><strong>Layout Key</strong><br />{VEHICLE_ID}/{selectedCaptureAngle}</div>
+            <div style={{ marginTop: 8 }}><strong>Layout Key</strong><br />{vehicleId}/{selectedCaptureAngle}</div>
           </article>
 
           <article style={{ background: 'rgba(2, 6, 23, 0.55)', border: '1px solid #334155', borderRadius: 8, padding: 12 }}>
@@ -1059,7 +1098,9 @@ export default function CameraTestPage(): React.JSX.Element {
           </article>
         </section>
       </details>
+      )}
 
+      {!productionMode && (
       <details style={{ background: 'rgba(15, 23, 42, 0.78)', border: '1px solid #334155', borderRadius: 8, margin: '18px auto 0', maxWidth: 1100, padding: '12px 14px' }}>
         <summary style={{ cursor: 'pointer', fontWeight: 800 }}>偵錯資訊</summary>
         <section aria-label="校準偵錯資訊" style={{ display: 'grid', gap: 14, gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', marginTop: 14 }}>
@@ -1147,6 +1188,7 @@ export default function CameraTestPage(): React.JSX.Element {
           </article>
         </section>
       </details>
+      )}
 
       <canvas ref={captureCanvasRef} style={{ display: 'none' }} />
     </main>
