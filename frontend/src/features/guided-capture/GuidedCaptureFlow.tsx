@@ -1,3 +1,5 @@
+import { signInAnonymously } from 'firebase/auth';
+import { auth } from '../../../firebase';
 import type { JSX } from 'react';
 import { useEffect } from 'react';
 import { GuidedCaptureProvider } from './context/GuidedCaptureContext';
@@ -92,55 +94,91 @@ function GuidedCaptureFlowContent(): JSX.Element {
   const guidedCapture = useGuidedCapture();
 
   const handleUploadAndFinish = async (): Promise<void> => {
-    const vehicleId = guidedCapture.plateNumber;
+  const vehicleId = guidedCapture.plateNumber;
 
-    if (vehicleId === '') {
-      console.error('Firebase upload aborted: plate number is empty');
-      return;
+  if (vehicleId === '') {
+    console.error('Firebase upload aborted: plate number is empty');
+    return;
+  }
+
+  if (guidedCapture.capturedImages.length !== 4) {
+    console.error(
+      `Firebase upload aborted: expected 4 images, received ${guidedCapture.capturedImages.length}`,
+    );
+    return;
+  }
+
+  const rentalId = generateRentalId(vehicleId);
+
+  try {
+    console.log('1. upload started', {
+      rentalId,
+      vehicleId,
+      imageCount: guidedCapture.capturedImages.length,
+    });
+
+    console.log('2. before signIn', {
+      currentUser: auth.currentUser?.uid ?? null,
+    });
+
+    if (!auth.currentUser) {
+      const credential = await signInAnonymously(auth);
+
+      console.log('3. signIn success', {
+        uid: credential.user.uid,
+      });
+    } else {
+      console.log('3. already signed in', {
+        uid: auth.currentUser.uid,
+      });
     }
 
-    if (guidedCapture.capturedImages.length !== 4) {
-      console.error(
-        `Firebase upload aborted: expected 4 images, received ${guidedCapture.capturedImages.length}`,
-      );
-      return;
+    console.log('4. before createRental', {
+      rentalId,
+      vehicleId,
+    });
+
+    await createRental(rentalId, vehicleId);
+
+    console.log('5. after createRental', {
+      rentalId,
+    });
+
+    console.log('6. before uploadPickupInspection', {
+      rentalId,
+      imageCount: guidedCapture.capturedImages.length,
+    });
+
+    await uploadPickupInspection({
+      rentalId,
+      vehicleId,
+      capturedImages: guidedCapture.capturedImages,
+      gps: {
+        lat: null,
+        lng: null,
+      },
+    });
+
+    console.log('7. after uploadPickupInspection', {
+      rentalId,
+    });
+
+    guidedCapture.resetInspection();
+  } catch (error) {
+    console.error('Firebase upload failed', error);
+
+    if (error instanceof Error) {
+      console.error('Firebase error details', {
+        name: error.name,
+        message: error.message,
+      });
+    } else {
+      console.error('Firebase unknown error', {
+        error,
+      });
     }
-
-    const rentalId = generateRentalId(vehicleId);
-
-    try {
-      console.log('Firebase upload started', {
-        rentalId,
-        vehicleId,
-        imageCount: guidedCapture.capturedImages.length,
-      });
-
-      await createRental(rentalId, vehicleId);
-
-      console.log('Firebase rental created', {
-        rentalId,
-      });
-
-      await uploadPickupInspection({
-        rentalId,
-        vehicleId,
-        capturedImages: guidedCapture.capturedImages,
-        gps: {
-          lat: null,
-          lng: null,
-        },
-      });
-
-      console.log('Firebase upload completed', {
-        rentalId,
-        vehicleId,
-      });
-
-      guidedCapture.resetInspection();
-    } catch (error) {
-      console.error('Firebase upload failed', error);
-    }
-  };
+  }
+};
 
   const selectedVehicleId = getVehicleIdForModel(guidedCapture.vehicleModel);
   const vehicleModelError = guidedCapture.vehicleModel === ''
